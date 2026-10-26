@@ -3,6 +3,7 @@ node_modules/
 credentials/
 data/configs.json
 data/guild-data.json
+data/*.backup.json
 data/*.tmp
 *.log
 *.zip
