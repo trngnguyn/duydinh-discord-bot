@@ -46,7 +46,7 @@ Hai file dữ liệu được `.gitignore` loại khỏi Git. Hãy backup địn
 | `DiscordInteractionAdapter` | Chuyển slash command, modal, menu và button thành lời gọi application service và phản hồi Discord. |
 | `createApplication` (`src/app.js`) | Composition root: khởi tạo client, repositories, services và adapter. |
 
-Embed giới hạn 12 nhân vật mỗi phái để không vượt giới hạn hiển thị của Discord; tất cả hồ sơ vẫn được lưu cục bộ. Khi đóng sự kiện, bảng và vote được giữ làm lịch sử, các nút thao tác bị khóa. Bot hỗ trợ một sự kiện đang mở trên mỗi guild.
+Embed liệt kê mọi nhân vật đã đăng ký theo từng phái. Nếu một phái dài hơn giới hạn một ô của Discord, danh sách được nối sang ô tiếp theo. Khi đóng sự kiện, bảng và vote được giữ làm lịch sử, các nút thao tác bị khóa. Bot hỗ trợ một sự kiện đang mở trên mỗi guild.
 
 ## Yêu cầu và cài đặt trên Windows
 

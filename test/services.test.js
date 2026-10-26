@@ -355,6 +355,32 @@ test("attendance board includes each class, attendance controls and registration
   assert.equal(payload.components[1].components[1].data.custom_id, "registration:start");
 });
 
+test("attendance board lists every registered member in a class", () => {
+  const builder = new AttendanceEmbedBuilder({ classRegistry: new ClassRegistry() });
+  const members = Array.from({ length: 14 }, (_, index) => ({
+    userId: `u${index}`,
+    characterName: `Nhân vật ${index + 1}`,
+    className: "Tố Vấn"
+  }));
+  const payload = builder.build({
+    event: {
+      eventId: "4bc8f8ba-a027-4e8f-b169-97ccad6b3fc8",
+      name: "Raid",
+      scheduledAt: "20:00",
+      dkp: "10",
+      status: "OPEN"
+    },
+    members,
+    attendanceRecords: members.map(member => ({ userId: member.userId, status: ATTENDANCE_STATUS.PRESENT }))
+  });
+  const classFields = payload.embeds[0].data.fields.filter(field => String(field.name).includes("Tố Vấn"));
+  const listed = classFields.map(field => field.value).join("\n");
+  assert.equal(classFields.length, 1);
+  assert.match(classFields[0].name, /Tố Vấn · 14/u);
+  for (const member of members) assert.match(listed, new RegExp(member.characterName, "u"));
+  assert.doesNotMatch(listed, /người nữa/u);
+});
+
 test("Discord message service recovers a persisted event board without sending a duplicate", async () => {
   const eventId = "4bc8f8ba-a027-4e8f-b169-97ccad6b3fc8";
   let edited = false;

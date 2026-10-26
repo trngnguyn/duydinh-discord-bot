@@ -13,11 +13,32 @@ const BUTTON_STATUSES = Object.freeze([
   { code: "absent", label: "Vắng mặt", emoji: "❌", style: ButtonStyle.Danger, status: ATTENDANCE_STATUS.ABSENT }
 ]);
 
+const DISCORD_FIELD_VALUE_LIMIT = 1024;
+
+/** Splits roster lines so each Discord field stays within the value limit. */
+function chunkLines(lines, limit = DISCORD_FIELD_VALUE_LIMIT) {
+  const chunks = [];
+  let current = [];
+  let length = 0;
+  for (const line of lines) {
+    const nextLength = length + (current.length ? 1 : 0) + line.length;
+    if (current.length && nextLength > limit) {
+      chunks.push(current.join("\n"));
+      current = [line];
+      length = line.length;
+      continue;
+    }
+    current.push(line);
+    length = nextLength;
+  }
+  if (current.length) chunks.push(current.join("\n"));
+  return chunks;
+}
+
 class AttendanceEmbedBuilder {
-  /** Injects class display policy and per-class display cap. */
-  constructor({ classRegistry, maxMembersPerClass = 12 }) {
+  /** Injects class display policy. */
+  constructor({ classRegistry }) {
     this.classRegistry = classRegistry;
-    this.maxMembersPerClass = maxMembersPerClass;
   }
 
   /** Builds Discord payload from prepared domain data without I/O. */
@@ -47,19 +68,27 @@ class AttendanceEmbedBuilder {
       const roster = registeredMembers
         .filter(member => member.className === classInfo.name)
         .sort((a, b) => a.characterName.localeCompare(b.characterName, "vi"));
-      const shown = roster.slice(0, this.maxMembersPerClass);
-      const lines = shown.map(member => {
+      const lines = roster.map(member => {
         const status = records.get(member.userId)?.status || ATTENDANCE_STATUS.PENDING;
         const guest = this.affiliationCode(member, records) === "guest" ? " · Khách" : "";
         return `${ATTENDANCE_STATUS_ICONS[status] || ATTENDANCE_STATUS_ICONS[ATTENDANCE_STATUS.PENDING]} ${this.safeText(member.characterName, 80)}${guest}`;
       });
-      if (roster.length > shown.length) {
-        lines.push(`… và ${roster.length - shown.length} người nữa.`);
+      const chunks = chunkLines(lines);
+      if (!chunks.length) {
+        embed.addFields({
+          name: `${classInfo.emoji} ${classInfo.name} · ${roster.length}`,
+          value: "—",
+          inline: true
+        });
+        continue;
       }
-      embed.addFields({
-        name: `${classInfo.emoji} ${classInfo.name} · ${roster.length}`,
-        value: lines.join("\n") || "—",
-        inline: true
+      chunks.forEach((value, index) => {
+        const part = chunks.length > 1 ? ` (${index + 1}/${chunks.length})` : "";
+        embed.addFields({
+          name: `${classInfo.emoji} ${classInfo.name} · ${roster.length}${part}`,
+          value,
+          inline: true
+        });
       });
     }
 
