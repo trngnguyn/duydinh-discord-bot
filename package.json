@@ -1,0 +1,19 @@
+{
+  "name": "duydinh-discord-registration-bot",
+  "version": "1.0.0",
+  "description": "Multi-guild Discord attendance bot with local JSON storage",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy-commands": "node src/deploy-commands.js",
+    "test": "node --test",
+    "check": "node scripts/check.js"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.22.1",
+    "dotenv": "^16.6.1"
+  }
+}
