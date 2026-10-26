@@ -73,7 +73,7 @@ test("validates character names and configured classes", () => {
   assert.throws(() => validateCharacterName("x".repeat(33)), ApplicationError);
   assert.equal(validateClassName("Toái Mộng", registry), "Toái Mộng");
   assert.throws(() => validateClassName("Không tồn tại", registry), ApplicationError);
-  assert.equal(registry.find("Long Ngâm").emoji, "<:to_van:1564176950321225861>");
+  assert.equal(registry.find("Long Ngâm").emoji, "<:thiet_y:1564176942683525150>");
 });
 
 test("registers once per Discord user and updates name/class on re-registration", async () => {
@@ -90,6 +90,12 @@ test("registers once per Discord user and updates name/class on re-registration"
   assert.equal(updated.characterName, "Nhân vật B");
   assert.equal(h.state.members.length, 1);
   assert.equal((await h.registrationService.getProfile("guild", h.member.id)).className, "Toái Mộng");
+  assert.equal(updated.affiliation, "guild");
+  const guest = await h.registrationService.register({
+    guildId: "guild", guildConfig: { roleId: "players" }, member: h.member,
+    characterName: "Nhân vật B", className: "Toái Mộng", affiliation: "guest"
+  });
+  assert.equal(guest.affiliation, "guest");
 });
 
 test("denies registration when member lacks the configured role", async () => {
@@ -291,12 +297,15 @@ test("registration modal asks for name and class together", () => {
   assert.equal(created.custom_id, "registration:profile");
   const nameLabel = created.components.find(component => component.label === "Tên nhân vật");
   const classLabel = created.components.find(component => component.label === "Phái");
+  const groupLabel = created.components.find(component => component.label === "Bạn là");
   assert.equal(nameLabel.component.custom_id, "character_name");
   assert.equal(nameLabel.component.placeholder, "Ví dụ: xThamLy");
   assert.equal(nameLabel.component.value, undefined);
   assert.equal(classLabel.component.required, true);
   assert.equal(classLabel.component.options.length, 7);
   assert.equal(classLabel.component.options.some(option => option.default), false);
+  assert.deepEqual(groupLabel.component.options.map(option => option.value), ["guild", "guest"]);
+  assert.equal(groupLabel.component.options.some(option => option.default), false);
 
   const updated = adapter.createRegistrationModal(
     { characterName: "xThamLy", className: "Cửu Linh" },
@@ -306,8 +315,10 @@ test("registration modal asks for name and class together", () => {
   assert.equal(updated.custom_id, "registration:mark:4bc8f8ba-a027-4e8f-b169-97ccad6b3fc8:present");
   const filledName = updated.components.find(component => component.label === "Tên nhân vật");
   const filledClass = updated.components.find(component => component.label === "Phái");
+  const filledGroup = updated.components.find(component => component.label === "Bạn là");
   assert.equal(filledName.component.value, "xThamLy");
   assert.equal(filledClass.component.options.find(option => option.default).label, "Cửu Linh");
+  assert.equal(filledGroup.component.options.find(option => option.default).value, "guild");
   assert.equal(adapter.parseRegistrationCustomId(updated.custom_id).code, "present");
 });
 
@@ -323,7 +334,7 @@ test("attendance board includes each class, attendance controls and registration
     },
     members: [
       { userId: "u1", characterName: "Nhân vật", className: "Thiết Y" },
-      { userId: "u2", characterName: "Chưa tham gia", className: "Thiết Y" }
+      { userId: "u2", characterName: "Chưa tham gia", className: "Thiết Y", affiliation: "guest" }
     ],
     attendanceRecords: [
       { userId: "u1", status: ATTENDANCE_STATUS.PENDING }
@@ -331,7 +342,11 @@ test("attendance board includes each class, attendance controls and registration
   });
   assert.equal(payload.embeds[0].data.fields.length, 7);
   assert.match(payload.embeds[0].data.description, /Đăng ký sự kiện:\*\* 1 \/ 2/u);
+  assert.match(payload.embeds[0].data.description, /Cửu Vĩ Thần Cung:\*\* 1 · \*\*Khách Scrim:\*\* 0/u);
   assert.match(payload.embeds[0].data.description, /Chưa đăng ký sự kiện:\*\* 1/u);
+  const classField = payload.embeds[0].data.fields.find(field => String(field.name).includes("Thiết Y"));
+  assert.match(classField.value, /Nhân vật/u);
+  assert.doesNotMatch(classField.value, /Khách/u);
   assert.match(payload.embeds[1].data.description, /Chưa xác nhận: 1/u);
   assert.match(payload.embeds[1].data.description, /Chưa đăng ký: 1/u);
   assert.equal(payload.components.length, 2);

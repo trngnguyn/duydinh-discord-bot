@@ -4,6 +4,7 @@ const {
   ATTENDANCE_STATUS_VALUES
 } = require("../../domain/constants/attendanceStatus");
 const { AttendanceRecord } = require("../../domain/entities/AttendanceRecord");
+const { affiliationOf } = require("../../domain/constants/affiliation");
 
 class AttendanceService {
   /** Injects event/member/attendance storage, authorization, queue and clock. */
@@ -45,6 +46,7 @@ class AttendanceService {
         discordUsername: member.user?.tag || member.user?.username || member.id,
         characterName: profile.characterName,
         className: profile.className,
+        affiliation: affiliationOf(profile),
         status: ATTENDANCE_STATUS.PENDING,
         updatedAt: this.clock().toISOString()
       });
@@ -79,6 +81,7 @@ class AttendanceService {
         discordUsername: member.user?.tag || member.user?.username || member.id,
         characterName: profile.characterName,
         className: profile.className,
+        affiliation: affiliationOf(profile),
         status,
         updatedAt: this.clock().toISOString()
       });

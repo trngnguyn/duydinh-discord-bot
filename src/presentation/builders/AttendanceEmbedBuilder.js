@@ -5,6 +5,7 @@ const {
   EmbedBuilder
 } = require("discord.js");
 const { ATTENDANCE_STATUS, ATTENDANCE_STATUS_ICONS } = require("../../domain/constants/attendanceStatus");
+const { affiliationOf } = require("../../domain/constants/affiliation");
 
 const BUTTON_STATUSES = Object.freeze([
   { code: "present", label: "Có mặt", emoji: "✅", style: ButtonStyle.Success, status: ATTENDANCE_STATUS.PRESENT },
@@ -36,6 +37,7 @@ class AttendanceEmbedBuilder {
         `**Thời gian:** ${this.safeText(event.scheduledAt, 100)}`,
         `**DKP / Ghi chú:** ${this.safeText(event.dkp || "—", 100)}`,
         `**Đăng ký sự kiện:** ${registeredMembers.length} / ${members.length} người`,
+        `**Cửu Vĩ Thần Cung:** ${registeredMembers.filter(member => this.affiliationCode(member, records) === "guild").length} · **Khách Scrim:** ${registeredMembers.filter(member => this.affiliationCode(member, records) === "guest").length}`,
         `**Chưa đăng ký sự kiện:** ${unregisteredCount} người`,
         `**Trạng thái sự kiện:** ${event.status === "OPEN" ? "ĐANG MỞ" : "ĐÃ ĐÓNG"}`
       ].join("\n"))
@@ -48,7 +50,8 @@ class AttendanceEmbedBuilder {
       const shown = roster.slice(0, this.maxMembersPerClass);
       const lines = shown.map(member => {
         const status = records.get(member.userId)?.status || ATTENDANCE_STATUS.PENDING;
-        return `${ATTENDANCE_STATUS_ICONS[status] || ATTENDANCE_STATUS_ICONS[ATTENDANCE_STATUS.PENDING]} ${this.safeText(member.characterName, 80)}`;
+        const guest = this.affiliationCode(member, records) === "guest" ? " · Khách" : "";
+        return `${ATTENDANCE_STATUS_ICONS[status] || ATTENDANCE_STATUS_ICONS[ATTENDANCE_STATUS.PENDING]} ${this.safeText(member.characterName, 80)}${guest}`;
       });
       if (roster.length > shown.length) {
         lines.push(`… và ${roster.length - shown.length} người nữa.`);
@@ -102,6 +105,12 @@ class AttendanceEmbedBuilder {
         )
       ]
     };
+  }
+
+  /** Uses the vote snapshot, then the profile. Missing values stay in the guild. */
+  affiliationCode(member, records) {
+    const record = records.get(member.userId);
+    return affiliationOf(record?.affiliation ? record : member);
   }
 
   safeText(value, maxLength) {

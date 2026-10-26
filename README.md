@@ -8,7 +8,7 @@ Bot Node.js 22+ dùng discord.js v14 để đăng ký nhân vật, tạo sự ki
 - Mỗi guild có cấu hình, hồ sơ thành viên, sự kiện, bảng phái và điểm danh riêng.
 - `/setup` chọn role thành viên, kênh đăng bảng và role quản trị riêng cho guild.
 - `/event-create`, `/event-edit`, `/event-close`, `/refresh` quản lý và khôi phục bảng sự kiện.
-- `/register` hoặc nút **Nhân vật** mở một form gồm tên và phái. Hồ sơ được giữ theo server và có thể cập nhật lại.
+- `/register` hoặc nút **Nhân vật** mở một form gồm tên, phái, và lựa chọn Cửu Vĩ Thần Cung hoặc Khách Scrim. Hồ sơ được giữ theo server và có thể cập nhật lại.
 - Với từng sự kiện, chọn ✅ Có mặt, ⏰ Đến muộn hoặc ❌ Vắng mặt để điểm danh. Nút **Đăng ký tham gia** dùng khi chưa muốn chọn trạng thái.
 - Sự kiện mới không kế thừa người tham gia hay vote từ sự kiện cũ. Người đã tạo hồ sơ vẫn cần đăng ký tham gia lại ở từng sự kiện.
 - Bảng tách riêng số người **Chưa xác nhận** (đã đăng ký sự kiện nhưng chưa chọn trạng thái) và **Chưa đăng ký** sự kiện. Danh sách theo phái chỉ hiển thị người đã đăng ký sự kiện đó.
@@ -97,7 +97,7 @@ Trong từng server, người có quyền Manage Server/Administrator:
 
 1. Chạy `/setup`, chọn role thành viên và kênh đăng bảng. Có thể chọn thêm `admin_role`; nếu không chọn, người có quyền Manage Server/Administrator vẫn quản trị được bot.
 2. Chạy `/event-create` để mở sự kiện và nhập tên, thời gian, DKP/ghi chú. Trường `time` nhận nội dung hiển thị, ví dụ `2:24 AM 22/10/2026` hoặc `14:24 22/10/2026`; bot giữ nguyên cách viết bạn nhập.
-3. Người chơi có role đã cấu hình dùng `/register` hoặc nút **Nhân vật** để tạo hồ sơ một lần. Form hỏi tên và phái cùng lúc.
+3. Người chơi có role đã cấu hình dùng `/register` hoặc nút **Nhân vật** để tạo hồ sơ một lần. Form hỏi tên, phái, và Cửu Vĩ Thần Cung hoặc Khách Scrim.
 4. Trên bảng sự kiện, chọn Có mặt, Đến muộn hoặc Vắng mặt. Nếu chưa có hồ sơ, bot mở form đăng ký rồi ghi luôn trạng thái đó. Nút **Đăng ký tham gia** để tên vào sự kiện với trạng thái **Chưa xác nhận**. Người chưa bấm gì được đếm là **Chưa đăng ký**.
 5. Dùng `/event-edit` để sửa sự kiện, `/event-close` để đóng và giữ bảng lịch sử, `/refresh` để làm mới/khôi phục bảng.
 

@@ -9,6 +9,7 @@ const {
   Events
 } = require("discord.js");
 const { BUTTON_STATUSES } = require("./builders/AttendanceEmbedBuilder");
+const { AFFILIATIONS, affiliationName, affiliationOf } = require("../domain/constants/affiliation");
 const { ApplicationError } = require("../domain/errors/ApplicationError");
 
 class DiscordInteractionAdapter {
@@ -62,7 +63,7 @@ class DiscordInteractionAdapter {
         return interaction.reply({
           content: [
             "**Hướng dẫn:**",
-            "`/register` mở một form để đăng ký hoặc cập nhật tên và phái.",
+            "`/register` mở một form để đăng ký hoặc cập nhật tên, phái, và Cửu Vĩ Thần Cung hoặc Khách Scrim.",
             "`/event-create` tạo sự kiện (quản trị viên).",
             "`/event-edit` và `/event-close` quản lý sự kiện.",
             "Hồ sơ chỉ cần tạo một lần. Trên bảng sự kiện, chọn Có mặt, Đến muộn hoặc Vắng mặt để điểm danh. Nút **Đăng ký tham gia** dùng khi chưa muốn chọn trạng thái.",
@@ -132,12 +133,25 @@ class DiscordInteractionAdapter {
         emoji,
         default: profile?.className === name
       })));
+    const savedAffiliation = profile ? affiliationOf(profile) : null;
+    const affiliationSelect = new StringSelectMenuBuilder()
+      .setCustomId("affiliation")
+      .setPlaceholder("Chọn bang hoặc khách")
+      .setMinValues(1)
+      .setMaxValues(1)
+      .setRequired(true)
+      .addOptions(AFFILIATIONS.map(item => ({
+        label: item.name,
+        value: item.code,
+        description: item.code === "guild" ? "Người trong bang" : "Khách tham gia scrim",
+        default: savedAffiliation === item.code
+      })));
 
     return new ModalBuilder()
       .setCustomId(customId)
       .setTitle(profile ? "Cập nhật nhân vật" : "Đăng ký nhân vật")
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent("Điền tên và chọn phái trong form này. Hồ sơ dùng cho mọi sự kiện của server.")
+        new TextDisplayBuilder().setContent("Điền tên, chọn phái, rồi chọn bạn thuộc bang hay là khách scrim.")
       )
       .addLabelComponents(
         new LabelBuilder()
@@ -147,7 +161,11 @@ class DiscordInteractionAdapter {
         new LabelBuilder()
           .setLabel("Phái")
           .setDescription("Chọn đúng một phái.")
-          .setStringSelectMenuComponent(classSelect)
+          .setStringSelectMenuComponent(classSelect),
+        new LabelBuilder()
+          .setLabel("Bạn là")
+          .setDescription("Người trong bang hoặc khách scrim.")
+          .setStringSelectMenuComponent(affiliationSelect)
       );
   }
 
@@ -171,6 +189,7 @@ class DiscordInteractionAdapter {
     this.permissionService.assertParticipant(interaction.member, this.configRepository.get(interaction.guildId));
     const characterName = interaction.fields.getTextInputValue("character_name").trim();
     const [className] = interaction.fields.getStringSelectValues("class_name");
+    const [affiliation] = interaction.fields.getStringSelectValues("affiliation");
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const guildConfig = this.configRepository.get(interaction.guildId);
@@ -179,9 +198,10 @@ class DiscordInteractionAdapter {
       guildConfig,
       member: interaction.member,
       characterName,
-      className
+      className,
+      affiliation
     });
-    const saved = `Đã lưu nhân vật **${profile.characterName}** — ${profile.className}.`;
+    const saved = `Đã lưu nhân vật **${profile.characterName}** — ${profile.className} — ${affiliationName(profile.affiliation)}.`;
 
     if (request.action === "join") {
       const result = await this.attendanceService.registerForEvent({
@@ -370,7 +390,7 @@ class DiscordInteractionAdapter {
     const profile = await this.registrationService.getProfile(interaction.guildId, requestedUser.id);
     if (!profile) return interaction.editReply("Chưa tìm thấy hồ sơ đăng ký của thành viên.");
     return interaction.editReply({
-      content: `**${profile.characterName}** — ${profile.className}\nDiscord: <@${profile.userId}>\nĐăng ký: ${profile.registeredAt || "Không rõ"}`,
+      content: `**${profile.characterName}** — ${profile.className}\n${affiliationName(affiliationOf(profile))}\nDiscord: <@${profile.userId}>\nĐăng ký: ${profile.registeredAt || "Không rõ"}`,
       allowedMentions: { parse: ["users"] }
     });
   }

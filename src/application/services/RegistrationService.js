@@ -1,5 +1,6 @@
 const { ApplicationError } = require("../../domain/errors/ApplicationError");
-const { validateCharacterName, validateClassName } = require("../../domain/validation/memberValidation");
+const { validateCharacterName, validateClassName, validateAffiliation } = require("../../domain/validation/memberValidation");
+const { DEFAULT_AFFILIATION } = require("../../domain/constants/affiliation");
 const { Member } = require("../../domain/entities/Member");
 
 class RegistrationService {
@@ -14,10 +15,11 @@ class RegistrationService {
   }
 
   /** Creates or updates the caller's single profile for this guild. */
-  async register({ guildId, guildConfig, member, characterName, className }) {
+  async register({ guildId, guildConfig, member, characterName, className, affiliation }) {
     this.permissionService.assertParticipant(member, guildConfig);
     const name = validateCharacterName(characterName);
     const validClass = validateClassName(className, this.classRegistry);
+    const group = validateAffiliation(affiliation ?? DEFAULT_AFFILIATION);
     return this.writeQueue.run(guildId, async () => {
       const members = this.deduplicate(await this.memberRepository.list(guildId));
       const profile = new Member({
@@ -25,6 +27,7 @@ class RegistrationService {
         discordUsername: member.user?.tag || member.user?.username || member.id,
         characterName: name,
         className: validClass,
+        affiliation: group,
         registeredAt: members.find(item => item.userId === member.id)?.registeredAt || this.clock().toISOString(),
         updatedAt: this.clock().toISOString()
       });

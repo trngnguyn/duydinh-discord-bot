@@ -1,4 +1,5 @@
 const { ApplicationError } = require("../errors/ApplicationError");
+const { AFFILIATIONS } = require("../constants/affiliation");
 
 const CHARACTER_NAME_MAX_LENGTH = 32;
 
@@ -25,4 +26,12 @@ function validateClassName(value, classRegistry) {
   return value;
 }
 
-module.exports = { validateCharacterName, validateClassName };
+/** Confirms the player chose the guild or a scrim guest. */
+function validateAffiliation(value) {
+  if (!AFFILIATIONS.some(item => item.code === value)) {
+    throw new ApplicationError("Hãy chọn Cửu Vĩ Thần Cung hoặc Khách Scrim.", "INVALID_AFFILIATION");
+  }
+  return value;
+}
+
+module.exports = { validateCharacterName, validateClassName, validateAffiliation };
