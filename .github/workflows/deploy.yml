@@ -1,0 +1,116 @@
+name: Test and deploy bot
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: duydinh-bot-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm test
+      - name: Check deployment script syntax
+        run: bash -n scripts/deploy-vps.sh
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: ${{ vars.VPS_PORT || '22' }}
+      DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH || '/root/bots/volam' }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Docker Hub image reference
+        env:
+          DOCKERHUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DOCKERHUB_USERNAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || { echo 'Set DOCKERHUB_USERNAME'; exit 1; }
+          repository="${DOCKERHUB_REPOSITORY:-$DOCKERHUB_USERNAME/duydinh-discord-bot}"
+          [[ "$repository" =~ ^[a-z0-9][a-z0-9_-]*/[a-z0-9][a-z0-9._-]*$ ]] || { echo 'Invalid DOCKERHUB_REPOSITORY; use namespace/repository'; exit 1; }
+          printf 'BOT_IMAGE=docker.io/%s:duydinh-%s\n' "$repository" "$GITHUB_SHA" >> "$GITHUB_ENV"
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VPS_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.:-]*$ ]] || { echo 'Set VPS_HOST'; exit 1; }
+          [[ "$VPS_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]] || { echo 'Set VPS_USER'; exit 1; }
+          [[ "$VPS_PORT" =~ ^[1-9][0-9]{0,4}$ ]] && (( VPS_PORT < 65536 )) || { echo 'Invalid VPS_PORT'; exit 1; }
+          [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9/_-]+$ && "$DEPLOY_PATH" != / ]] || exit 1
+          [[ -n "$SSH_PRIVATE_KEY" && -n "$SSH_KNOWN_HOSTS" ]] || { echo 'Set VPS_SSH_KEY and VPS_KNOWN_HOSTS'; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/bot_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/bot_key ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host bot-vps
+            HostName $VPS_HOST
+            User $VPS_USER
+            Port $VPS_PORT
+            IdentityFile ~/.ssh/bot_key
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+            ConnectTimeout 15
+            ServerAliveInterval 15
+            ServerAliveCountMax 3
+          EOF
+          ssh bot-vps "test -f '$DEPLOY_PATH/.env' && test -d '$DEPLOY_PATH/data' && docker info >/dev/null && docker compose version"
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Authenticate VPS image pulls
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh bot-vps "install -d -m 700 '$DEPLOY_PATH/.docker'"
+          printf '%s\n' "$DOCKERHUB_TOKEN" | ssh bot-vps "docker --config '$DEPLOY_PATH/.docker' login --username '$DOCKERHUB_USERNAME' --password-stdin"
+          ssh bot-vps "chmod 600 '$DEPLOY_PATH/.docker/config.json'"
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - name: Build and push release image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ vars.VPS_PLATFORM || 'linux/amd64' }}
+          tags: ${{ env.BOT_IMAGE }}
+          push: true
+      - name: Upload deployment files and deploy from Docker Hub
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging="$DEPLOY_PATH/.incoming/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ssh bot-vps "mkdir -p '$staging'"
+          scp docker-compose.prod.yml scripts/deploy-vps.sh "bot-vps:$staging/"
+          ssh bot-vps "bash '$staging/deploy-vps.sh' '$DEPLOY_PATH' '$staging' '$BOT_IMAGE'"

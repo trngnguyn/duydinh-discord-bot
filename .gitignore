@@ -1,9 +1,13 @@
 node_modules/
 .env
+.docker/
+.image.env
+.image.env.tmp
+.incoming/
+.deploy.lock
+backups/
 credentials/
-data/configs.json
-data/guild-data.json
-data/*.backup.json
+data/*.json
 data/*.tmp
 *.log
 *.zip

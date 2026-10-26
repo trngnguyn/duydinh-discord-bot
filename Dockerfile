@@ -9,4 +9,4 @@ COPY src ./src
 
 USER node
 
-CMD ["npm", "start"]
+CMD ["node", "src/index.js"]

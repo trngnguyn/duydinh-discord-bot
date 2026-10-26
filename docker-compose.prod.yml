@@ -1,0 +1,16 @@
+services:
+  bot:
+    image: ${BOT_IMAGE:?Set BOT_IMAGE to the release image}
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    mem_limit: 512m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,5 +1,7 @@
 # Discord bot điểm danh bang hội — DuyDinh
 
+Deploy automatically from GitHub Actions to a VPS: [deployment setup and checklist](docs/deployment.md).
+
 Bot Node.js 22+ dùng discord.js v14 để đăng ký nhân vật, tạo sự kiện và điểm danh qua Embed/buttons. Toàn bộ dữ liệu được lưu trên máy chạy bot bằng JSON; không cần Google Sheets, database server, hoặc dịch vụ lưu trữ bên ngoài.
 
 ## Tính năng

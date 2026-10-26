@@ -1,7 +1,14 @@
 .env
+.docker
 .git
 .gitignore
 node_modules
 npm-debug.log
 data
+backups
+.incoming
+.image.env
+.image.env.tmp
+.deploy.lock
+credentials
 *.zip
