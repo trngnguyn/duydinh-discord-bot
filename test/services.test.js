@@ -55,7 +55,9 @@ function createHarness() {
     memberRepository, classRosterRepository, classRegistry, permissionService, writeQueue
   });
 
-  const eventService = new EventService({ eventRepository, permissionService, writeQueue });
+  const eventService = new EventService({
+    eventRepository, attendanceRepository, permissionService, writeQueue
+  });
   const attendanceService = new AttendanceService({
     attendanceRepository, eventRepository, memberRepository, permissionService, writeQueue
   });
@@ -118,26 +120,42 @@ test("recognizes Discord Manage Guild and Administrator permission bitfields", (
   assert.equal(permissions.isAdmin(roleAdmin, { adminRoleId: "guild-b-admins" }), false);
 });
 
-test("creates a single open event, edits and closes it without deleting history", async () => {
+test("creates several open events and edits, closes, or deletes by exact name", async () => {
   const h = createHarness();
   const guildConfig = { adminRoleId: "admins" };
   const event = await h.eventService.create({
     guildId: "guild", guildConfig, member: h.admin,
     name: "Raid", scheduledAt: "20:00 2026-10-20", dkp: "10", channelId: "channel"
   });
+  const second = await h.eventService.create({
+    guildId: "guild", guildConfig, member: h.admin,
+    name: "Scrim", scheduledAt: "21:00", dkp: "", channelId: "channel"
+  });
+  assert.equal(second.status, "OPEN");
+  assert.equal((await h.eventService.listOpen("guild")).length, 2);
   await assert.rejects(h.eventService.create({
     guildId: "guild", guildConfig, member: h.admin,
-    name: "Another", scheduledAt: "21:00", dkp: "", channelId: "channel"
-  }), error => error.code === "OPEN_EVENT_EXISTS");
+    name: "Raid", scheduledAt: "22:00", dkp: "", channelId: "channel"
+  }), error => error.code === "DUPLICATE_EVENT_NAME");
   const edited = await h.eventService.edit({
-    guildId: "guild", guildConfig, member: h.admin, eventId: event.eventId, changes: { dkp: "20" }
+    guildId: "guild", guildConfig, member: h.admin, name: "Raid", changes: { dkp: "20" }
   });
   assert.equal(edited.dkp, "20");
+  await assert.rejects(h.eventService.close({
+    guildId: "guild", guildConfig, member: h.admin, name: "Sai tên"
+  }), error => error.code === "EVENT_NOT_FOUND");
   const closed = await h.eventService.close({
-    guildId: "guild", guildConfig, member: h.admin, eventId: event.eventId
+    guildId: "guild", guildConfig, member: h.admin, name: "Raid"
   });
   assert.equal(closed.status, "CLOSED");
+  h.state.attendance.push({ eventId: event.eventId, userId: "user-1", status: "Có mặt" });
+  h.state.attendance.push({ eventId: second.eventId, userId: "user-1", status: "Có mặt" });
+  const removed = await h.eventService.remove({
+    guildId: "guild", guildConfig, member: h.admin, name: "Scrim"
+  });
+  assert.equal(removed.eventId, second.eventId);
   assert.equal(h.state.events.length, 1);
+  assert.deepEqual(h.state.attendance.map(record => record.eventId), [event.eventId]);
 });
 
 test("records and updates one attendance status per event and user", async () => {
@@ -172,7 +190,7 @@ test("records and updates one attendance status per event and user", async () =>
   assert.equal(updated.record.status, ATTENDANCE_STATUS.LATE);
   assert.equal(h.state.attendance.length, 1);
   await h.eventService.close({
-    guildId: "guild", guildConfig: { adminRoleId: "admins" }, member: h.admin, eventId: event.eventId
+    guildId: "guild", guildConfig: { adminRoleId: "admins" }, member: h.admin, name: "Raid"
   });
   assert.equal((await h.attendanceService.listForEvent("guild", event.eventId))[0].status, ATTENDANCE_STATUS.LATE);
   const nextEvent = await h.eventService.create({
@@ -199,7 +217,7 @@ test("marks attendance without a separate event signup, and rejects closed event
   assert.equal(marked.record.status, ATTENDANCE_STATUS.ABSENT);
   assert.equal(h.state.attendance.length, 1);
   await h.eventService.close({
-    guildId: "guild", guildConfig: { adminRoleId: "admins" }, member: h.admin, eventId: event.eventId
+    guildId: "guild", guildConfig: { adminRoleId: "admins" }, member: h.admin, name: "Raid"
   });
   await assert.rejects(h.attendanceService.mark({
     guildId: "guild", guildConfig: { roleId: "players" }, member: h.member,
@@ -279,6 +297,36 @@ test("guild configuration persists roles and channels independently", async t =>
   assert.deepEqual(restartedRepository.get("guild-b"), {
     roleId: "players-b", adminRoleId: "admins-b", channelId: "channel-b"
   });
+});
+
+test("event name autocomplete suggests events that contain the typed text", async () => {
+  const adapter = new DiscordInteractionAdapter({
+    client: { on() {} },
+    configRepository: {},
+    classRegistry: new ClassRegistry(),
+    permissionService: {},
+    registrationService: {},
+    eventService: {
+      async list() {
+        return [
+          { name: "Scrim 29/10", status: "OPEN" },
+          { name: "Bang chiến 3/10", status: "CLOSED" },
+          { name: "Raid", status: "OPEN" }
+        ];
+      }
+    },
+    attendanceService: {},
+    discordMessageService: {}
+  });
+  let choices = null;
+  await adapter.handle({
+    inGuild: () => true,
+    isAutocomplete: () => true,
+    guildId: "guild",
+    options: { getFocused: () => ({ name: "name", value: "scr" }) },
+    async respond(payload) { choices = payload; }
+  });
+  assert.deepEqual(choices, [{ name: "Scrim 29/10 · Đang mở", value: "Scrim 29/10" }]);
 });
 
 test("registration modal asks for name and class together", () => {

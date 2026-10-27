@@ -61,6 +61,19 @@ class DiscordMessageService {
     await this.eventService.setMessageId(guildId, eventId, message.id);
     return message;
   }
+
+  /** Removes the saved board message. A missing message is ignored. */
+  async deleteBoard(guildId, event) {
+    if (!event?.messageId) return;
+    const channel = await this.client.channels.fetch(event.channelId);
+    if (channel?.guildId !== guildId || !channel?.isTextBased() || !channel.messages) return;
+    try {
+      const message = await channel.messages.fetch(event.messageId);
+      await message.delete();
+    } catch (error) {
+      if (error.code !== 10008 && error.code !== 10003) throw error;
+    }
+  }
 }
 
 module.exports = { DiscordMessageService };

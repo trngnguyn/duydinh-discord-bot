@@ -18,15 +18,19 @@ const commands = [
     .addStringOption(option => option.setName("dkp").setDescription("DKP hoặc ghi chú").setMaxLength(100)),
   new SlashCommandBuilder()
     .setName("event-edit")
-    .setDescription("Chỉnh sửa sự kiện đang mở")
-    .addStringOption(option => option.setName("event_id").setDescription("EventID").setRequired(true))
-    .addStringOption(option => option.setName("name").setDescription("Tên mới").setMaxLength(100))
+    .setDescription("Sửa sự kiện đang mở theo đúng tên")
+    .addStringOption(option => option.setName("name").setDescription("Tên sự kiện hiện tại, gõ để gợi ý").setRequired(true).setAutocomplete(true).setMaxLength(100))
+    .addStringOption(option => option.setName("new_name").setDescription("Tên mới").setMaxLength(100))
     .addStringOption(option => option.setName("time").setDescription("Ngày giờ, ví dụ: 2:24 AM 22/10/2026").setMaxLength(100))
     .addStringOption(option => option.setName("dkp").setDescription("DKP/ghi chú mới").setMaxLength(100)),
   new SlashCommandBuilder()
     .setName("event-close")
-    .setDescription("Đóng sự kiện, giữ nguyên lịch sử")
-    .addStringOption(option => option.setName("event_id").setDescription("EventID").setRequired(true)),
+    .setDescription("Đóng sự kiện theo đúng tên, giữ lịch sử")
+    .addStringOption(option => option.setName("name").setDescription("Tên sự kiện, gõ để gợi ý").setRequired(true).setAutocomplete(true).setMaxLength(100)),
+  new SlashCommandBuilder()
+    .setName("event-delete")
+    .setDescription("Xóa sự kiện theo đúng tên")
+    .addStringOption(option => option.setName("name").setDescription("Tên sự kiện, gõ để gợi ý").setRequired(true).setAutocomplete(true).setMaxLength(100)),
   new SlashCommandBuilder()
     .setName("refresh")
     .setDescription("Khôi phục/cập nhật bảng điểm danh"),

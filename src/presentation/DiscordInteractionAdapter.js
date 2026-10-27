@@ -40,6 +40,7 @@ class DiscordInteractionAdapter {
 
   /** Dispatches supported guild interactions to their presentation handlers. */
   async handle(interaction) {
+    if (interaction.isAutocomplete()) return this.autocompleteEventName(interaction);
     if (!interaction.inGuild()) {
       if (interaction.isRepliable()) {
         return interaction.reply({
@@ -55,6 +56,27 @@ class DiscordInteractionAdapter {
     if (interaction.isButton()) return this.handleButton(interaction);
   }
 
+  /** Suggests stored event names while the admin types in the name option. */
+  async autocompleteEventName(interaction) {
+    const focused = interaction.options.getFocused(true);
+    if (focused.name !== "name" || !interaction.guildId) return interaction.respond([]);
+    const query = String(focused.value || "").trim().toLocaleLowerCase("vi");
+    const events = await this.eventService.list(interaction.guildId);
+    const seen = new Set();
+    const choices = [];
+    const ordered = [...events.filter(event => event.status === "OPEN"), ...events.filter(event => event.status !== "OPEN")];
+    for (const event of ordered) {
+      const name = String(event.name || "").trim();
+      if (!name || seen.has(name)) continue;
+      if (query && !name.toLocaleLowerCase("vi").includes(query)) continue;
+      seen.add(name);
+      const status = event.status === "OPEN" ? "Đang mở" : "Đã đóng";
+      choices.push({ name: `${name} · ${status}`.slice(0, 100), value: name.slice(0, 100) });
+      if (choices.length === 25) break;
+    }
+    return interaction.respond(choices);
+  }
+
   async handleCommand(interaction) {
     const { guildId, member } = interaction;
     const guildConfig = this.configRepository.get(guildId);
@@ -64,8 +86,8 @@ class DiscordInteractionAdapter {
           content: [
             "**Hướng dẫn:**",
             "`/register` mở một form để đăng ký hoặc cập nhật tên, phái, và Cửu Vĩ Thần Cung hoặc Khách Scrim.",
-            "`/event-create` tạo sự kiện (quản trị viên).",
-            "`/event-edit` và `/event-close` quản lý sự kiện.",
+            "`/event-create` tạo sự kiện. Có thể mở nhiều sự kiện cùng lúc (quản trị viên).",
+            "`/event-edit`, `/event-close` và `/event-delete` cần nhập đúng tên sự kiện.",
             "Hồ sơ chỉ cần tạo một lần. Trên bảng sự kiện, chọn Có mặt, Đến muộn hoặc Vắng mặt để điểm danh. Nút **Đăng ký tham gia** dùng khi chưa muốn chọn trạng thái.",
             "`/member-info` xem hồ sơ của bạn; quản trị viên có thể xem thành viên khác.",
             "`/setup` cấu hình role/kênh riêng của server và `/refresh` khôi phục bảng (quản trị viên)."
@@ -90,6 +112,10 @@ class DiscordInteractionAdapter {
         this.permissionService.assertAdmin(member, guildConfig);
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         return this.closeEvent(interaction);
+      case "event-delete":
+        this.permissionService.assertAdmin(member, guildConfig);
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        return this.deleteEvent(interaction);
       case "refresh":
         this.permissionService.assertAdmin(member, guildConfig);
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -235,8 +261,7 @@ class DiscordInteractionAdapter {
       });
     }
 
-    const event = await this.eventService.getOpen(interaction.guildId);
-    if (event && !await this.syncBoard(interaction.guildId, event.eventId)) {
+    if (!await this.syncOpenBoards(interaction.guildId)) {
       return interaction.editReply({
         content: `${saved} Bảng chưa cập nhật; quản trị viên có thể dùng /refresh.`,
         allowedMentions: { parse: [] }
@@ -312,8 +337,7 @@ class DiscordInteractionAdapter {
       adminRoleId: adminRole?.id
     });
     await this.registrationService.refreshClassRoster(interaction.guildId);
-    const openEvent = await this.eventService.getOpen(interaction.guildId);
-    const synced = openEvent ? await this.syncBoard(interaction.guildId, openEvent.eventId) : true;
+    const synced = await this.syncOpenBoards(interaction.guildId);
     const suffix = synced ? "" : " Bảng điểm danh chưa cập nhật; dùng /refresh để thử lại.";
     const adminRoleMessage = adminRole ? ` Role quản trị: <@&${adminRole.id}>.` : "";
     return interaction.editReply(`Đã lưu cấu hình riêng cho server. Role thành viên: <@&${role.id}>. Kênh bảng: <#${channel.id}>.${adminRoleMessage}${suffix}`);
@@ -340,9 +364,9 @@ class DiscordInteractionAdapter {
       guildId: interaction.guildId,
       guildConfig: this.configRepository.get(interaction.guildId),
       member: interaction.member,
-      eventId: interaction.options.getString("event_id", true),
+      name: interaction.options.getString("name", true),
       changes: {
-        name: interaction.options.getString("name") ?? undefined,
+        name: interaction.options.getString("new_name") ?? undefined,
         scheduledAt: interaction.options.getString("time") ?? undefined,
         dkp: interaction.options.getString("dkp") ?? undefined
       }
@@ -357,19 +381,57 @@ class DiscordInteractionAdapter {
       guildId: interaction.guildId,
       guildConfig: this.configRepository.get(interaction.guildId),
       member: interaction.member,
-      eventId: interaction.options.getString("event_id", true)
+      name: interaction.options.getString("name", true)
     });
     const synced = await this.syncBoard(interaction.guildId, event.eventId);
     const suffix = synced ? "" : " Bảng chưa cập nhật; dùng /refresh để thử lại.";
     return interaction.editReply(`Đã đóng sự kiện **${event.name}**. Lịch sử điểm danh được giữ nguyên.${suffix}`);
   }
 
+  async deleteEvent(interaction) {
+    const event = await this.eventService.remove({
+      guildId: interaction.guildId,
+      guildConfig: this.configRepository.get(interaction.guildId),
+      member: interaction.member,
+      name: interaction.options.getString("name", true)
+    });
+    let messageRemoved = true;
+    try {
+      await this.discordMessageService.deleteBoard(interaction.guildId, event);
+    } catch (error) {
+      messageRemoved = false;
+      console.error(`Đã xóa sự kiện ${event.eventId} nhưng chưa xóa bảng Discord: ${error.message}`);
+    }
+    const suffix = messageRemoved ? "" : " Bảng Discord chưa xóa được.";
+    return interaction.editReply(`Đã xóa sự kiện **${event.name}** cùng phiếu của sự kiện đó.${suffix}`);
+  }
+
   async refresh(interaction) {
     const memberCount = await this.registrationService.refreshClassRoster(interaction.guildId);
-    const event = await this.eventService.getOpen(interaction.guildId);
-    if (!event) return interaction.editReply(`Đã cập nhật danh sách phái (${memberCount} hồ sơ); hiện không có sự kiện đang mở.`);
-    const message = await this.discordMessageService.syncEvent(interaction.guildId, event.eventId);
-    return interaction.editReply(`Đã đồng bộ bảng điểm danh: https://discord.com/channels/${interaction.guildId}/${event.channelId}/${message.id}`);
+    const events = await this.eventService.listOpen(interaction.guildId);
+    if (!events.length) {
+      return interaction.editReply(`Đã cập nhật danh sách phái (${memberCount} hồ sơ); hiện không có sự kiện đang mở.`);
+    }
+    const lines = [];
+    for (const event of events) {
+      try {
+        const message = await this.discordMessageService.syncEvent(interaction.guildId, event.eventId);
+        lines.push(`**${event.name}**: https://discord.com/channels/${interaction.guildId}/${event.channelId}/${message.id}`);
+      } catch (error) {
+        console.error(`Không thể đồng bộ bảng ${event.eventId}: ${error.message}`);
+        lines.push(`**${event.name}**: chưa cập nhật được bảng.`);
+      }
+    }
+    return interaction.editReply(`Đã đồng bộ ${events.length} sự kiện đang mở.\n${lines.join("\n")}`);
+  }
+
+  async syncOpenBoards(guildId) {
+    const events = await this.eventService.listOpen(guildId);
+    let synced = true;
+    for (const event of events) {
+      if (!await this.syncBoard(guildId, event.eventId)) synced = false;
+    }
+    return synced;
   }
 
   async syncBoard(guildId, eventId) {

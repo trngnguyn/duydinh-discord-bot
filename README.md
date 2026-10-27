@@ -9,7 +9,7 @@ Bot Node.js 22+ dùng discord.js v14 để đăng ký nhân vật, tạo sự ki
 - Hỗ trợ nhiều Discord server. Không có `GUILD_ID` cố định; commands được đăng ký global.
 - Mỗi guild có cấu hình, hồ sơ thành viên, sự kiện, bảng phái và điểm danh riêng.
 - `/setup` chọn role thành viên, kênh đăng bảng và role quản trị riêng cho guild.
-- `/event-create`, `/event-edit`, `/event-close`, `/refresh` quản lý và khôi phục bảng sự kiện.
+- `/event-create` mở thêm sự kiện dù đã có sự kiện khác đang mở. `/event-edit`, `/event-close` và `/event-delete` yêu cầu nhập đúng tên sự kiện. `/refresh` khôi phục các bảng đang mở.
 - `/register` hoặc nút **Nhân vật** mở một form gồm tên, phái, và lựa chọn Cửu Vĩ Thần Cung hoặc Khách Scrim. Hồ sơ được giữ theo server và có thể cập nhật lại.
 - Với từng sự kiện, chọn ✅ Có mặt, ⏰ Đến muộn hoặc ❌ Vắng mặt để điểm danh. Nút **Đăng ký tham gia** dùng khi chưa muốn chọn trạng thái.
 - Sự kiện mới không kế thừa người tham gia hay vote từ sự kiện cũ. Người đã tạo hồ sơ vẫn cần đăng ký tham gia lại ở từng sự kiện.
@@ -48,7 +48,7 @@ Hai file dữ liệu được `.gitignore` loại khỏi Git. Hãy backup địn
 | `DiscordInteractionAdapter` | Chuyển slash command, modal, menu và button thành lời gọi application service và phản hồi Discord. |
 | `createApplication` (`src/app.js`) | Composition root: khởi tạo client, repositories, services và adapter. |
 
-Embed liệt kê mọi nhân vật đã đăng ký theo từng phái. Nếu một phái dài hơn giới hạn một ô của Discord, danh sách được nối sang ô tiếp theo. Khi đóng sự kiện, bảng và vote được giữ làm lịch sử, các nút thao tác bị khóa. Bot hỗ trợ một sự kiện đang mở trên mỗi guild.
+Embed liệt kê mọi nhân vật đã đăng ký theo từng phái. Nếu một phái dài hơn giới hạn một ô của Discord, danh sách được nối sang ô tiếp theo. Khi đóng sự kiện, bảng và vote được giữ làm lịch sử, các nút thao tác bị khóa. Một server có thể mở nhiều sự kiện cùng lúc. Mỗi sự kiện cần một tên riêng.
 
 ## Yêu cầu và cài đặt trên Windows
 
@@ -101,7 +101,7 @@ Trong từng server, người có quyền Manage Server/Administrator:
 2. Chạy `/event-create` để mở sự kiện và nhập tên, thời gian, DKP/ghi chú. Trường `time` nhận nội dung hiển thị, ví dụ `2:24 AM 22/10/2026` hoặc `14:24 22/10/2026`; bot giữ nguyên cách viết bạn nhập.
 3. Người chơi có role đã cấu hình dùng `/register` hoặc nút **Nhân vật** để tạo hồ sơ một lần. Form hỏi tên, phái, và Cửu Vĩ Thần Cung hoặc Khách Scrim.
 4. Trên bảng sự kiện, chọn Có mặt, Đến muộn hoặc Vắng mặt. Nếu chưa có hồ sơ, bot mở form đăng ký rồi ghi luôn trạng thái đó. Nút **Đăng ký tham gia** để tên vào sự kiện với trạng thái **Chưa xác nhận**. Người chưa bấm gì được đếm là **Chưa đăng ký**.
-5. Dùng `/event-edit` để sửa sự kiện, `/event-close` để đóng và giữ bảng lịch sử, `/refresh` để làm mới/khôi phục bảng.
+5. Dùng `/event-edit`, `/event-close` hoặc `/event-delete` và nhập đúng tên sự kiện. Đóng giữ lịch sử. Xóa gỡ sự kiện, phiếu và bảng Discord. `/refresh` làm mới mọi bảng đang mở.
 
 Role được kiểm tra lại trong ứng dụng; việc một lệnh hiện trong Discord không thay thế kiểm tra quyền này. Mỗi server tự lưu role và kênh riêng, vì vậy thao tác ở server này không dùng cấu hình của server khác.
 

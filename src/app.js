@@ -39,6 +39,7 @@ function createApplication() {
   const memberRepository = new JsonGuildTableRepository({ store: dataStore, collection: "members" });
   const eventRepository = new JsonGuildTableRepository({ store: dataStore, collection: "events" });
   const attendanceRepository = new JsonGuildTableRepository({ store: dataStore, collection: "attendance" });
+  const lineupRepository = new JsonGuildTableRepository({ store: dataStore, collection: "lineups" });
   const classRosterRepository = new JsonGuildClassRosterRepository({ store: dataStore });
   assertRepositoryContracts({ memberRepository, eventRepository, attendanceRepository, classRosterRepository });
 
@@ -47,7 +48,9 @@ function createApplication() {
   const registrationService = new RegistrationService({
     memberRepository, classRosterRepository, classRegistry, permissionService, writeQueue
   });
-  const eventService = new EventService({ eventRepository, permissionService, writeQueue });
+  const eventService = new EventService({
+    eventRepository, attendanceRepository, lineupRepository, permissionService, writeQueue
+  });
   const attendanceService = new AttendanceService({
     attendanceRepository, eventRepository, memberRepository, permissionService, writeQueue
   });
