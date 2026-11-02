@@ -13,6 +13,8 @@ const { JsonGuildClassRosterRepository } = require("./infrastructure/persistence
 const { AttendanceEmbedBuilder } = require("./presentation/builders/AttendanceEmbedBuilder");
 const { DiscordMessageService } = require("./infrastructure/discord/DiscordMessageService");
 const { DiscordInteractionAdapter } = require("./presentation/DiscordInteractionAdapter");
+const { GoogleSheetPublisher } = require("./infrastructure/sheets/GoogleSheetPublisher");
+const { SheetSyncService } = require("./application/services/SheetSyncService");
 
 function assertRepositoryContracts(repositories) {
   const requirements = {
@@ -63,6 +65,13 @@ function createApplication() {
     memberRepository,
     embedBuilder
   });
+  const sheetSyncService = new SheetSyncService({
+    dataStore,
+    publisher: new GoogleSheetPublisher({
+      spreadsheetId: env.googleSheetId,
+      keyFile: env.googleServiceAccountFile
+    })
+  });
   const interactionAdapter = new DiscordInteractionAdapter({
     client,
     configRepository,
@@ -71,7 +80,8 @@ function createApplication() {
     registrationService,
     eventService,
     attendanceService,
-    discordMessageService
+    discordMessageService,
+    sheetSyncService
   });
   interactionAdapter.attach();
 
@@ -81,7 +91,8 @@ function createApplication() {
     configRepository,
     dataStore,
     eventService,
-    discordMessageService
+    discordMessageService,
+    sheetSyncService
   };
 }
 

@@ -22,12 +22,13 @@ class DiscordInteractionAdapter {
     registrationService,
     eventService,
     attendanceService,
-    discordMessageService
+    discordMessageService,
+    sheetSyncService = { async sync() { return false; } }
   }) {
     Object.assign(this, {
       client, configRepository,
       classRegistry, permissionService, registrationService, eventService,
-      attendanceService, discordMessageService
+      attendanceService, discordMessageService, sheetSyncService
     });
   }
 
@@ -241,6 +242,7 @@ class DiscordInteractionAdapter {
       const joined = result.alreadyRegistered
         ? `Bạn đã có tên trong sự kiện **${result.event.name}**.`
         : `Đã thêm vào sự kiện **${result.event.name}**.`;
+      await this.publishSheet();
       return interaction.editReply({ content: `${saved} ${joined}${suffix}`, allowedMentions: { parse: [] } });
     }
 
@@ -255,12 +257,14 @@ class DiscordInteractionAdapter {
       });
       const synced = await this.syncBoard(interaction.guildId, result.event.eventId);
       const suffix = synced ? "" : " Bảng chưa cập nhật; quản trị viên có thể dùng /refresh.";
+      await this.publishSheet();
       return interaction.editReply({
         content: `${saved} Trạng thái **${status}** đã được ghi cho sự kiện **${result.event.name}**.${suffix}`,
         allowedMentions: { parse: [] }
       });
     }
 
+    await this.publishSheet();
     if (!await this.syncOpenBoards(interaction.guildId)) {
       return interaction.editReply({
         content: `${saved} Bảng chưa cập nhật; quản trị viên có thể dùng /refresh.`,
@@ -297,6 +301,7 @@ class DiscordInteractionAdapter {
       const message = result.alreadyRegistered
         ? `Bạn đã đăng ký sự kiện **${result.event.name}** rồi.${suffix}`
         : `Đã đăng ký tham gia **${result.event.name}**. Có thể chọn Có mặt, Đến muộn hoặc Vắng mặt khi sẵn sàng.${suffix}`;
+      await this.publishSheet();
       return interaction.editReply({ content: message, allowedMentions: { parse: [] } });
     }
     const match = /^attendance:([0-9a-f-]{36}):(present|late|absent)$/iu.exec(interaction.customId);
@@ -319,6 +324,7 @@ class DiscordInteractionAdapter {
     });
     const synced = await this.syncBoard(interaction.guildId, result.event.eventId);
     const suffix = synced ? "" : " Bảng chưa cập nhật; quản trị viên có thể dùng /refresh.";
+    await this.publishSheet();
     return interaction.editReply(
       {
         content: `Đã ghi nhận trạng thái **${status}** cho nhân vật **${result.record.characterName}**.${suffix}`,
@@ -356,6 +362,7 @@ class DiscordInteractionAdapter {
     });
     const synced = await this.syncBoard(interaction.guildId, event.eventId);
     const suffix = synced ? "" : "\nKhông thể cập nhật bảng Discord; dùng /refresh để thử lại.";
+    await this.publishSheet();
     return interaction.editReply(`Đã tạo sự kiện **${event.name}** tại <#${event.channelId}>.${suffix}\nEventID: \`${event.eventId}\``);
   }
 
@@ -373,6 +380,7 @@ class DiscordInteractionAdapter {
     });
     const synced = await this.syncBoard(interaction.guildId, event.eventId);
     const suffix = synced ? "" : " Bảng chưa cập nhật; dùng /refresh để thử lại.";
+    await this.publishSheet();
     return interaction.editReply(`Đã lưu thay đổi sự kiện **${event.name}**.${suffix}`);
   }
 
@@ -385,6 +393,7 @@ class DiscordInteractionAdapter {
     });
     const synced = await this.syncBoard(interaction.guildId, event.eventId);
     const suffix = synced ? "" : " Bảng chưa cập nhật; dùng /refresh để thử lại.";
+    await this.publishSheet();
     return interaction.editReply(`Đã đóng sự kiện **${event.name}**. Lịch sử điểm danh được giữ nguyên.${suffix}`);
   }
 
@@ -403,6 +412,7 @@ class DiscordInteractionAdapter {
       console.error(`Đã xóa sự kiện ${event.eventId} nhưng chưa xóa bảng Discord: ${error.message}`);
     }
     const suffix = messageRemoved ? "" : " Bảng Discord chưa xóa được.";
+    await this.publishSheet();
     return interaction.editReply(`Đã xóa sự kiện **${event.name}** cùng phiếu của sự kiện đó.${suffix}`);
   }
 
@@ -410,6 +420,7 @@ class DiscordInteractionAdapter {
     const memberCount = await this.registrationService.refreshClassRoster(interaction.guildId);
     const events = await this.eventService.listOpen(interaction.guildId);
     if (!events.length) {
+      await this.publishSheet();
       return interaction.editReply(`Đã cập nhật danh sách phái (${memberCount} hồ sơ); hiện không có sự kiện đang mở.`);
     }
     const lines = [];
@@ -422,6 +433,7 @@ class DiscordInteractionAdapter {
         lines.push(`**${event.name}**: chưa cập nhật được bảng.`);
       }
     }
+    await this.publishSheet();
     return interaction.editReply(`Đã đồng bộ ${events.length} sự kiện đang mở.\n${lines.join("\n")}`);
   }
 
@@ -432,6 +444,10 @@ class DiscordInteractionAdapter {
       if (!await this.syncBoard(guildId, event.eventId)) synced = false;
     }
     return synced;
+  }
+
+  async publishSheet() {
+    await this.sheetSyncService.sync();
   }
 
   async syncBoard(guildId, eventId) {

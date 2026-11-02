@@ -3,7 +3,7 @@ const { createApplication } = require("./app");
 
 async function main() {
   const app = createApplication();
-  const { client, env, eventService, discordMessageService } = app;
+  const { client, env, eventService, discordMessageService, sheetSyncService } = app;
   const restoringGuilds = new Map();
 
   async function restoreGuild(guild) {
@@ -31,6 +31,7 @@ async function main() {
   client.once(Events.ClientReady, async readyClient => {
     console.log(`Bot đã đăng nhập: ${readyClient.user.tag}`);
     await Promise.all([...readyClient.guilds.cache.values()].map(restoreGuild));
+    if (await sheetSyncService.sync()) console.log("Đã ghi dữ liệu điểm danh lên Google Sheet.");
   });
 
   client.on(Events.GuildCreate, guild => {

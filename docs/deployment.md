@@ -48,7 +48,11 @@ Enter these values in the editor, then save:
 ```dotenv
 DISCORD_TOKEN=your_bot_token
 DISCORD_CLIENT_ID=your_application_id
+GOOGLE_SHEET_ID=
+GOOGLE_SERVICE_ACCOUNT_FILE=
 ```
+
+Leave both Google values empty to keep sheet sync off. To turn it on, set `GOOGLE_SHEET_ID` to the spreadsheet ID, set `GOOGLE_SERVICE_ACCOUNT_FILE=credentials/google-service-account.json`, and copy the service account JSON to that path on the VPS. Do not commit that file. Enable the Google Sheets API and share the sheet with the service account email as an editor.
 
 The container runs as UID 1000, which must be able to write `data/`. The directory's
 group also gives the deployment user access to read and back up those files.

@@ -102,6 +102,7 @@ Trong từng server, người có quyền Manage Server/Administrator:
 3. Người chơi có role đã cấu hình dùng `/register` hoặc nút **Nhân vật** để tạo hồ sơ một lần. Form hỏi tên, phái, và Cửu Vĩ Thần Cung hoặc Khách Scrim.
 4. Trên bảng sự kiện, chọn Có mặt, Đến muộn hoặc Vắng mặt. Nếu chưa có hồ sơ, bot mở form đăng ký rồi ghi luôn trạng thái đó. Nút **Đăng ký tham gia** để tên vào sự kiện với trạng thái **Chưa xác nhận**. Người chưa bấm gì được đếm là **Chưa đăng ký**.
 5. Dùng `/event-edit`, `/event-close` hoặc `/event-delete` và nhập đúng tên sự kiện. Đóng giữ lịch sử. Xóa gỡ sự kiện, phiếu và bảng Discord. `/refresh` làm mới mọi bảng đang mở.
+6. Khi `.env` có `GOOGLE_SHEET_ID` và `GOOGLE_SERVICE_ACCOUNT_FILE`, bot tự ghi lại hai trang **Chi tiết** và **Thống kê** trên Google Sheet sau mỗi phiếu hoặc thay đổi sự kiện. File khóa JSON nằm trong `credentials/` và không được đưa lên Git. Sheet cần được chia sẻ cho email service account với quyền Người chỉnh sửa; thành viên chỉ cần quyền Người xem.
 
 Role được kiểm tra lại trong ứng dụng; việc một lệnh hiện trong Discord không thay thế kiểm tra quyền này. Mỗi server tự lưu role và kênh riêng, vì vậy thao tác ở server này không dùng cấu hình của server khác.
 

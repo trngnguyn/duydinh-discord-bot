@@ -11,6 +11,28 @@ class JsonGuildDataStore {
     return data;
   }
 
+  /** Returns events, attendance and members for every guild in the JSON file. */
+  snapshots() {
+    const database = this.file.readObject();
+    return Object.entries(database).flatMap(([guildId, guildData]) => {
+      if (!guildData || typeof guildData !== "object" || Array.isArray(guildData)) return [];
+      return [{
+        guildId,
+        events: this.collection(guildData, "events", guildId),
+        attendance: this.collection(guildData, "attendance", guildId),
+        members: this.collection(guildData, "members", guildId)
+      }];
+    });
+  }
+
+  collection(guildData, name, guildId) {
+    const records = guildData[name] ?? [];
+    if (!Array.isArray(records)) {
+      throw new Error(`Dữ liệu ${name} của guild ${guildId} phải là một danh sách.`);
+    }
+    return records;
+  }
+
   replace(guildId, collection, records) {
     if (!guildId) throw new Error("guildId is required.");
     if (!Array.isArray(records)) throw new TypeError(`${collection} records must be an array.`);
