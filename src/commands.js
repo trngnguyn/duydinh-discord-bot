@@ -12,7 +12,7 @@ const commands = [
     .addRoleOption(option => option.setName("admin_role").setDescription("Role quản trị bot (không bắt buộc)")),
   new SlashCommandBuilder()
     .setName("event-create")
-    .setDescription("Tạo sự kiện điểm danh")
+    .setDescription("Tạo sự kiện điểm danh ở kênh hiện tại")
     .addStringOption(option => option.setName("name").setDescription("Tên sự kiện").setRequired(true).setMaxLength(100))
     .addStringOption(option => option.setName("time").setDescription("Ngày giờ, ví dụ: 2:24 AM 22/10/2026").setRequired(true).setMaxLength(100))
     .addStringOption(option => option.setName("dkp").setDescription("DKP hoặc ghi chú").setMaxLength(100)),

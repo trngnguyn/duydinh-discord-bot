@@ -98,7 +98,7 @@ npm.cmd start
 Trong từng server, người có quyền Manage Server/Administrator:
 
 1. Chạy `/setup`, chọn role thành viên và kênh đăng bảng. Có thể chọn thêm `admin_role`; nếu không chọn, người có quyền Manage Server/Administrator vẫn quản trị được bot.
-2. Chạy `/event-create` để mở sự kiện và nhập tên, thời gian, DKP/ghi chú. Trường `time` nhận nội dung hiển thị, ví dụ `2:24 AM 22/10/2026` hoặc `14:24 22/10/2026`; bot giữ nguyên cách viết bạn nhập.
+2. Chạy `/event-create` ngay trong kênh cần đăng bảng (ví dụ scrim hoặc bang-chiến) và nhập tên, thời gian, DKP/ghi chú. Bảng được gửi vào kênh đang gọi lệnh. Trường `time` nhận nội dung hiển thị, ví dụ `2:24 AM 22/10/2026` hoặc `14:24 22/10/2026`; bot giữ nguyên cách viết bạn nhập.
 3. Người chơi có role đã cấu hình dùng `/register` hoặc nút **Nhân vật** để tạo hồ sơ một lần. Form hỏi tên, phái, và Cửu Vĩ Thần Cung hoặc Khách Scrim.
 4. Trên bảng sự kiện, chọn Có mặt, Đến muộn hoặc Vắng mặt. Nếu chưa có hồ sơ, bot mở form đăng ký rồi ghi luôn trạng thái đó. Nút **Đăng ký tham gia** để tên vào sự kiện với trạng thái **Chưa xác nhận**. Người chưa bấm gì được đếm là **Chưa đăng ký**.
 5. Dùng `/event-edit`, `/event-close` hoặc `/event-delete` và nhập đúng tên sự kiện. Đóng giữ lịch sử. Xóa gỡ sự kiện, phiếu và bảng Discord. `/refresh` làm mới mọi bảng đang mở.
@@ -114,7 +114,7 @@ Role được kiểm tra lại trong ứng dụng; việc một lệnh hiện tr
 - Trường thời gian trên `/event-create` và `/event-edit` có gợi ý định dạng như `2:24 AM 22/10/2026`. Đây là văn bản hiển thị trên bảng, bot không tự đổi múi giờ hoặc phân tích ngày giờ.
 - Bot không gửi/sửa Embed: kiểm tra quyền View Channels, Send Messages, Embed Links và Read Message History ở đúng kênh.
 - Lỗi parse JSON: dừng bot, backup file dữ liệu và phục hồi JSON hợp lệ; bot báo lỗi thay vì âm thầm xóa/ghi đè dữ liệu lỗi.
-- Bảng không tự cập nhật: dùng `/refresh`; kiểm tra bot còn truy cập được kênh đã cấu hình.
+- Bảng không tự cập nhật: dùng `/refresh`; kiểm tra bot còn truy cập được kênh của sự kiện đó.
 
 Không cần bật Message Content Intent vì bot chỉ xử lý slash commands và interactions.
 

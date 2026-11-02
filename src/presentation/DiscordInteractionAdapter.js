@@ -86,7 +86,7 @@ class DiscordInteractionAdapter {
           content: [
             "**Hướng dẫn:**",
             "`/register` mở một form để đăng ký hoặc cập nhật tên, phái, và Cửu Vĩ Thần Cung hoặc Khách Scrim.",
-            "`/event-create` tạo sự kiện. Có thể mở nhiều sự kiện cùng lúc (quản trị viên).",
+            "`/event-create` tạo sự kiện ở kênh đang gọi lệnh. Có thể mở nhiều sự kiện cùng lúc (quản trị viên).",
             "`/event-edit`, `/event-close` và `/event-delete` cần nhập đúng tên sự kiện.",
             "Hồ sơ chỉ cần tạo một lần. Trên bảng sự kiện, chọn Có mặt, Đến muộn hoặc Vắng mặt để điểm danh. Nút **Đăng ký tham gia** dùng khi chưa muốn chọn trạng thái.",
             "`/member-info` xem hồ sơ của bạn; quản trị viên có thể xem thành viên khác.",
@@ -352,11 +352,11 @@ class DiscordInteractionAdapter {
       name: interaction.options.getString("name", true),
       scheduledAt: interaction.options.getString("time", true),
       dkp: interaction.options.getString("dkp") || "",
-      channelId: guildConfig?.channelId || interaction.channelId
+      channelId: interaction.channelId || guildConfig?.channelId
     });
     const synced = await this.syncBoard(interaction.guildId, event.eventId);
     const suffix = synced ? "" : "\nKhông thể cập nhật bảng Discord; dùng /refresh để thử lại.";
-    return interaction.editReply(`Đã tạo sự kiện **${event.name}**.${suffix}\nEventID: \`${event.eventId}\``);
+    return interaction.editReply(`Đã tạo sự kiện **${event.name}** tại <#${event.channelId}>.${suffix}\nEventID: \`${event.eventId}\``);
   }
 
   async editEvent(interaction) {
