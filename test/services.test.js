@@ -330,10 +330,11 @@ test("event name autocomplete suggests events that contain the typed text", asyn
 });
 
 test("registration modal asks for name and class together", () => {
+  const classRegistry = new ClassRegistry();
   const adapter = new DiscordInteractionAdapter({
     client: { on() {} },
     configRepository: {},
-    classRegistry: new ClassRegistry(),
+    classRegistry,
     permissionService: {},
     registrationService: {},
     eventService: {},
@@ -350,7 +351,7 @@ test("registration modal asks for name and class together", () => {
   assert.equal(nameLabel.component.placeholder, "Ví dụ: xThamLy");
   assert.equal(nameLabel.component.value, undefined);
   assert.equal(classLabel.component.required, true);
-  assert.equal(classLabel.component.options.length, 7);
+  assert.equal(classLabel.component.options.length, classRegistry.list().length);
   assert.equal(classLabel.component.options.some(option => option.default), false);
   assert.deepEqual(groupLabel.component.options.map(option => option.value), ["guild", "guest"]);
   assert.equal(groupLabel.component.options.some(option => option.default), false);
@@ -371,7 +372,8 @@ test("registration modal asks for name and class together", () => {
 });
 
 test("attendance board includes each class, attendance controls and registration button", () => {
-  const builder = new AttendanceEmbedBuilder({ classRegistry: new ClassRegistry() });
+  const classRegistry = new ClassRegistry();
+  const builder = new AttendanceEmbedBuilder({ classRegistry });
   const payload = builder.build({
     event: {
       eventId: "4bc8f8ba-a027-4e8f-b169-97ccad6b3fc8",
@@ -388,7 +390,7 @@ test("attendance board includes each class, attendance controls and registration
       { userId: "u1", status: ATTENDANCE_STATUS.PENDING }
     ]
   });
-  assert.equal(payload.embeds[0].data.fields.length, 7);
+  assert.equal(payload.embeds[0].data.fields.length, classRegistry.list().length);
   assert.match(payload.embeds[0].data.description, /Đăng ký sự kiện:\*\* 1 \/ 2/u);
   assert.match(payload.embeds[0].data.description, /Cửu Vĩ Thần Cung:\*\* 1 · \*\*Khách Scrim:\*\* 0/u);
   assert.match(payload.embeds[0].data.description, /Chưa đăng ký sự kiện:\*\* 1/u);
