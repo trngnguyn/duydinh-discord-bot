@@ -75,7 +75,7 @@ test("validates character names and configured classes", () => {
   assert.throws(() => validateCharacterName("x".repeat(33)), ApplicationError);
   assert.equal(validateClassName("Toái Mộng", registry), "Toái Mộng");
   assert.throws(() => validateClassName("Không tồn tại", registry), ApplicationError);
-  assert.equal(registry.find("Long Ngâm").emoji, "<:thiet_y:1564176942683525150>");
+  assert.equal(registry.find("Long Ngâm").emoji, "<:long_ngam:1478375160431247464>");
 });
 
 test("registers once per Discord user and updates name/class on re-registration", async () => {
