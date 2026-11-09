@@ -5,7 +5,8 @@ const CLASSES = Object.freeze([
   Object.freeze({ name: "Tố Vấn", emoji: "<:long_ngam:1564176953534320642>", order: 4 }),
   Object.freeze({ name: "Long Ngâm", emoji: "<:thiet_y:1564176942683525150>", order: 5 }),
   Object.freeze({ name: "Cửu Linh", emoji: "<:toai_mong:1564176938921361529>", order: 6 }),
-  Object.freeze({ name: "Thần Tương", emoji: "<:huyet_ha:1564176946823172137>", order: 7 })
+  Object.freeze({ name: "Thần Tương", emoji: "<:huyet_ha:1564176946823172137>", order: 7 }),
+  Object.freeze({ name: "Huyền Cơ", emoji: "<:huyen_co:1478375428472438785>", order: 8 })
 ]);
 
 class ClassRegistry {
