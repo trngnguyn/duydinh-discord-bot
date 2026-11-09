@@ -4,7 +4,7 @@ const CLASSES = Object.freeze([
   Object.freeze({ name: "Huyết Hà", emoji: "<:1xuehe:1478375513147052092>", order: 3 }),
   Object.freeze({ name: "Tố Vấn", emoji: "<:1suwen:1478375305369489520>", order: 4 }),
   Object.freeze({ name: "Long Ngâm", emoji: "<:1longyin:1478375160431247464>", order: 5 }),
-  Object.freeze({ name: "Cửu Linh", emoji: "<:1jiuling:1569183767623639152>", order: 6 }),
+  Object.freeze({ name: "Cửu Linh", emoji: "<:cuulinh:1569183767623639152>", order: 6 }),
   Object.freeze({ name: "Thần Tương", emoji: "<:1shenxiang:1478375101098496000>", order: 7 }),
   Object.freeze({ name: "Huyền Cơ", emoji: "<:1xuanji:1478375428472438785>", order: 8 })
 ]);
