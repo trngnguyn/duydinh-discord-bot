@@ -25,8 +25,12 @@ const commands = [
     .addStringOption(option => option.setName("dkp").setDescription("DKP/ghi chú mới").setMaxLength(100)),
   new SlashCommandBuilder()
     .setName("event-close")
-    .setDescription("Đóng sự kiện theo đúng tên, giữ lịch sử")
-    .addStringOption(option => option.setName("name").setDescription("Tên sự kiện, gõ để gợi ý").setRequired(true).setAutocomplete(true).setMaxLength(100)),
+    .setDescription("Đóng sự kiện đang mở theo đúng tên, giữ lịch sử")
+    .addStringOption(option => option.setName("name").setDescription("Tên sự kiện đang mở, gõ để gợi ý").setRequired(true).setAutocomplete(true).setMaxLength(100)),
+  new SlashCommandBuilder()
+    .setName("event-votes")
+    .setDescription("Xem phiếu của một sự kiện đã đóng")
+    .addStringOption(option => option.setName("name").setDescription("Tên sự kiện đã đóng, gõ để gợi ý").setRequired(true).setAutocomplete(true).setMaxLength(100)),
   new SlashCommandBuilder()
     .setName("event-delete")
     .setDescription("Xóa sự kiện theo đúng tên")

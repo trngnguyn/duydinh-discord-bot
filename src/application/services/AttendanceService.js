@@ -99,6 +99,29 @@ class AttendanceService {
   async listForEvent(guildId, eventId) {
     return (await this.attendanceRepository.list(guildId)).filter(record => record.eventId === eventId);
   }
+
+  /** Returns the saved votes for one closed event, found by its exact name. */
+  async listClosedByName(guildId, name) {
+    const events = await this.eventRepository.list(guildId);
+    const event = events[this.indexByName(events, name)];
+    if (event.status !== "CLOSED") {
+      throw new ApplicationError("Chỉ xem được phiếu của sự kiện đã đóng.", "EVENT_NOT_CLOSED");
+    }
+    const records = await this.listForEvent(guildId, event.eventId);
+    return { event, records };
+  }
+
+  /** Finds exactly one event with this name. */
+  indexByName(events, name) {
+    const target = String(name || "").trim();
+    if (!target) throw new ApplicationError("Cần nhập đúng tên sự kiện.", "INVALID_EVENT_NAME");
+    const indexes = events.flatMap((event, index) => event.name === target ? [index] : []);
+    if (indexes.length === 0) throw new ApplicationError("Không tìm thấy sự kiện có tên này.", "EVENT_NOT_FOUND");
+    if (indexes.length > 1) {
+      throw new ApplicationError("Có nhiều sự kiện cùng tên này. Hãy đặt tên khác nhau trước.", "AMBIGUOUS_EVENT_NAME");
+    }
+    return indexes[0];
+  }
 }
 
 module.exports = { AttendanceService };

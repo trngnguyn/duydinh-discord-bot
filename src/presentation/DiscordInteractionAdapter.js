@@ -10,6 +10,7 @@ const {
 } = require("discord.js");
 const { BUTTON_STATUSES } = require("./builders/AttendanceEmbedBuilder");
 const { AFFILIATIONS, affiliationName, affiliationOf } = require("../domain/constants/affiliation");
+const { ATTENDANCE_STATUS } = require("../domain/constants/attendanceStatus");
 const { ApplicationError } = require("../domain/errors/ApplicationError");
 
 class DiscordInteractionAdapter {
@@ -65,7 +66,8 @@ class DiscordInteractionAdapter {
     const events = await this.eventService.list(interaction.guildId);
     const seen = new Set();
     const choices = [];
-    const ordered = [...events.filter(event => event.status === "OPEN"), ...events.filter(event => event.status !== "OPEN")];
+    const pool = this.eventsForAutocomplete(interaction.commandName, events);
+    const ordered = [...pool.filter(event => event.status === "OPEN"), ...pool.filter(event => event.status !== "OPEN")];
     for (const event of ordered) {
       const name = String(event.name || "").trim();
       if (!name || seen.has(name)) continue;
@@ -78,6 +80,13 @@ class DiscordInteractionAdapter {
     return interaction.respond(choices);
   }
 
+  /** Limits name suggestions to the events a command is allowed to target. */
+  eventsForAutocomplete(commandName, events) {
+    if (commandName === "event-close") return events.filter(event => event.status === "OPEN");
+    if (commandName === "event-votes") return events.filter(event => event.status === "CLOSED");
+    return events;
+  }
+
   async handleCommand(interaction) {
     const { guildId, member } = interaction;
     const guildConfig = this.configRepository.get(guildId);
@@ -88,7 +97,8 @@ class DiscordInteractionAdapter {
             "**Hướng dẫn:**",
             "`/register` mở một form để đăng ký hoặc cập nhật tên, phái, và Cửu Vĩ Thần Cung hoặc Khách Scrim.",
             "`/event-create` tạo sự kiện ở kênh đang gọi lệnh. Có thể mở nhiều sự kiện cùng lúc (quản trị viên).",
-            "`/event-edit`, `/event-close` và `/event-delete` cần nhập đúng tên sự kiện.",
+            "`/event-edit`, `/event-close` và `/event-delete` cần nhập đúng tên sự kiện. `/event-close` chỉ đóng sự kiện đang mở.",
+            "`/event-votes` xem phiếu của một sự kiện đã đóng.",
             "Hồ sơ chỉ cần tạo một lần. Trên bảng sự kiện, chọn Có mặt, Đến muộn hoặc Vắng mặt để điểm danh. Nút **Đăng ký tham gia** dùng khi chưa muốn chọn trạng thái.",
             "`/member-info` xem hồ sơ của bạn; quản trị viên có thể xem thành viên khác.",
             "`/setup` cấu hình role/kênh riêng của server và `/refresh` khôi phục bảng (quản trị viên)."
@@ -113,6 +123,10 @@ class DiscordInteractionAdapter {
         this.permissionService.assertAdmin(member, guildConfig);
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         return this.closeEvent(interaction);
+      case "event-votes":
+        this.permissionService.assertAdmin(member, guildConfig);
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        return this.showClosedVotes(interaction);
       case "event-delete":
         this.permissionService.assertAdmin(member, guildConfig);
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -395,6 +409,50 @@ class DiscordInteractionAdapter {
     const suffix = synced ? "" : " Bảng chưa cập nhật; dùng /refresh để thử lại.";
     await this.publishSheet();
     return interaction.editReply(`Đã đóng sự kiện **${event.name}**. Lịch sử điểm danh được giữ nguyên.${suffix}`);
+  }
+
+  async showClosedVotes(interaction) {
+    const { event, records } = await this.attendanceService.listClosedByName(
+      interaction.guildId,
+      interaction.options.getString("name", true)
+    );
+    const chunks = this.voteReportChunks(event, records);
+    await interaction.editReply(chunks[0]);
+    for (const chunk of chunks.slice(1)) {
+      await interaction.followUp({ content: chunk, flags: MessageFlags.Ephemeral });
+    }
+  }
+
+  voteReportChunks(event, records) {
+    const lines = [
+      `**${event.name}** · ${event.scheduledAt || "Không rõ giờ"}`,
+      "Sự kiện đã đóng."
+    ];
+    for (const status of [
+      ATTENDANCE_STATUS.PRESENT,
+      ATTENDANCE_STATUS.LATE,
+      ATTENDANCE_STATUS.ABSENT,
+      ATTENDANCE_STATUS.PENDING
+    ]) {
+      const names = records
+        .filter(record => record.status === status)
+        .map(record => record.characterName || record.discordUsername || "Không rõ tên")
+        .sort((left, right) => left.localeCompare(right, "vi"));
+      lines.push(`**${status}** (${names.length}): ${names.length ? names.join(", ") : "—"}`);
+    }
+    const chunks = [];
+    let current = "";
+    for (const line of lines) {
+      const next = current ? `${current}\n${line}` : line;
+      if (next.length > 1900 && current) {
+        chunks.push(current);
+        current = line;
+      } else {
+        current = next;
+      }
+    }
+    if (current) chunks.push(current);
+    return chunks;
   }
 
   async deleteEvent(interaction) {

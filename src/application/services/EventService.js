@@ -70,13 +70,15 @@ class EventService {
     });
   }
 
-  /** Closes the named event without removing event or attendance history. */
+  /** Closes an open event without removing event or attendance history. */
   async close({ guildId, guildConfig, member, name }) {
     this.permissionService.assertAdmin(member, guildConfig);
     return this.writeQueue.run(guildId, async () => {
       const events = await this.eventRepository.list(guildId);
       const index = this.indexByName(events, name);
-      if (events[index].status === "CLOSED") return events[index];
+      if (events[index].status !== "OPEN") {
+        throw new ApplicationError("Chỉ đóng được sự kiện đang mở.", "EVENT_NOT_OPEN");
+      }
       events[index] = new GuildEvent({
         ...events[index],
         status: "CLOSED",

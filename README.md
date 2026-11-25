@@ -9,7 +9,7 @@ Bot Node.js 22+ dùng discord.js v14 để đăng ký nhân vật, tạo sự ki
 - Hỗ trợ nhiều Discord server. Không có `GUILD_ID` cố định; commands được đăng ký global.
 - Mỗi guild có cấu hình, hồ sơ thành viên, sự kiện, bảng phái và điểm danh riêng.
 - `/setup` chọn role thành viên, kênh đăng bảng và role quản trị riêng cho guild.
-- `/event-create` mở thêm sự kiện dù đã có sự kiện khác đang mở. `/event-edit`, `/event-close` và `/event-delete` yêu cầu nhập đúng tên sự kiện. `/refresh` khôi phục các bảng đang mở.
+- `/event-create` mở thêm sự kiện dù đã có sự kiện khác đang mở. `/event-edit`, `/event-close` và `/event-delete` yêu cầu nhập đúng tên sự kiện. `/event-close` chỉ đóng sự kiện đang mở. `/event-votes` xem phiếu của một sự kiện đã đóng. `/refresh` khôi phục các bảng đang mở.
 - `/register` hoặc nút **Nhân vật** mở một form gồm tên, phái, và lựa chọn Cửu Vĩ Thần Cung hoặc Khách Scrim. Hồ sơ được giữ theo server và có thể cập nhật lại.
 - Với từng sự kiện, chọn ✅ Có mặt, ⏰ Đến muộn hoặc ❌ Vắng mặt để điểm danh. Nút **Đăng ký tham gia** dùng khi chưa muốn chọn trạng thái.
 - Sự kiện mới không kế thừa người tham gia hay vote từ sự kiện cũ. Người đã tạo hồ sơ vẫn cần đăng ký tham gia lại ở từng sự kiện.

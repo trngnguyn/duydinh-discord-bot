@@ -148,6 +148,9 @@ test("creates several open events and edits, closes, or deletes by exact name", 
     guildId: "guild", guildConfig, member: h.admin, name: "Raid"
   });
   assert.equal(closed.status, "CLOSED");
+  await assert.rejects(h.eventService.close({
+    guildId: "guild", guildConfig, member: h.admin, name: "Raid"
+  }), error => error.code === "EVENT_NOT_OPEN");
   h.state.attendance.push({ eventId: event.eventId, userId: "user-1", status: "Có mặt" });
   h.state.attendance.push({ eventId: second.eventId, userId: "user-1", status: "Có mặt" });
   const removed = await h.eventService.remove({
@@ -193,11 +196,17 @@ test("records and updates one attendance status per event and user", async () =>
     guildId: "guild", guildConfig: { adminRoleId: "admins" }, member: h.admin, name: "Raid"
   });
   assert.equal((await h.attendanceService.listForEvent("guild", event.eventId))[0].status, ATTENDANCE_STATUS.LATE);
+  const closedVotes = await h.attendanceService.listClosedByName("guild", "Raid");
+  assert.equal(closedVotes.records[0].status, ATTENDANCE_STATUS.LATE);
   const nextEvent = await h.eventService.create({
     guildId: "guild", guildConfig: { adminRoleId: "admins" }, member: h.admin,
     name: "Raid mới", scheduledAt: "Tối mai", dkp: "", channelId: "channel"
   });
   assert.deepEqual(await h.attendanceService.listForEvent("guild", nextEvent.eventId), []);
+  await assert.rejects(
+    h.attendanceService.listClosedByName("guild", "Raid mới"),
+    error => error.code === "EVENT_NOT_CLOSED"
+  );
 });
 
 test("marks attendance without a separate event signup, and rejects closed events", async () => {
@@ -327,6 +336,28 @@ test("event name autocomplete suggests events that contain the typed text", asyn
     async respond(payload) { choices = payload; }
   });
   assert.deepEqual(choices, [{ name: "Scrim 29/10 · Đang mở", value: "Scrim 29/10" }]);
+
+  choices = null;
+  await adapter.handle({
+    inGuild: () => true,
+    isAutocomplete: () => true,
+    commandName: "event-close",
+    guildId: "guild",
+    options: { getFocused: () => ({ name: "name", value: "" }) },
+    async respond(payload) { choices = payload; }
+  });
+  assert.deepEqual(choices.map(choice => choice.value), ["Scrim 29/10", "Raid"]);
+
+  choices = null;
+  await adapter.handle({
+    inGuild: () => true,
+    isAutocomplete: () => true,
+    commandName: "event-votes",
+    guildId: "guild",
+    options: { getFocused: () => ({ name: "name", value: "" }) },
+    async respond(payload) { choices = payload; }
+  });
+  assert.deepEqual(choices, [{ name: "Bang chiến 3/10 · Đã đóng", value: "Bang chiến 3/10" }]);
 });
 
 test("registration modal asks for name and class together", () => {
